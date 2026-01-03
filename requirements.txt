@@ -1,0 +1,7 @@
+flask
+flask-socketio
+pypdf
+numpy
+faiss-cpu
+requests
+eventlet

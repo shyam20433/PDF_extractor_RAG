@@ -1,0 +1,239 @@
+# RAG Engine: Detailed Logic Trace
+
+This trace follows the exact execution flow of your `rag_engine.py` using a sample PDF with **1200 characters** and **3 pages**.
+
+---
+
+## 1. PDF Loading Loop
+```python
+for page_num, page in enumerate(reader.pages):
+```
+
+**Loop Iterations:**
+
+**First Iteration:**
+*   `page_num` = 0
+*   `page` = <PageObject 1>
+*   `page.extract_text()` = "Introduction\nThis document covers basic concepts..."
+
+**Second Iteration:**
+*   `page_num` = 1
+*   `page` = <PageObject 2>
+*   `page.extract_text()` = "Chapter 1\nHere we discuss the main topics..."
+
+**Third Iteration:**
+*   `page_num` = 2
+*   `page` = <PageObject 3>
+*   `page.extract_text()` = "Conclusion\nIn summary, we have learned..."
+
+---
+
+## 2. Storing Pages
+```python
+pages.append({
+    "text": page.extract_text(),
+    "page": page_num + 1
+})
+```
+
+**Resulting `pages` list:**
+```python
+pages = [
+    {'text': 'Introduction...', 'page': 1},
+    {'text': 'Chapter 1...',      'page': 2},
+    {'text': 'Conclusion...',     'page': 3}
+]
+```
+
+---
+
+## 3. Combining Text
+```python
+full_text = "".join(p["text"] for p in pages)
+```
+
+**Result:**
+```python
+full_text = "Introduction...Chapter 1...Conclusion..."
+# Total length: 1200 characters
+```
+
+---
+
+## 4. Chunking Logic
+```python
+step = chunk_size - overlap  # 500 - 100 = 400
+for i in range(0, len(full_text), step):
+```
+
+**Loop Logic:** `range(0, 1200, 400)`
+*   `i` = 0
+*   `i` = 400
+*   `i` = 800
+
+---
+
+## 5. Creating Chunks (Inside Loop)
+```python
+chunk = full_text[i : i + chunk_size]
+```
+
+**Iteration 1 (i=0):**
+*   `chunk` = `full_text[0 : 500]`
+*   **Content:** Characters 0 to 500 ("Introduction...")
+
+**Iteration 2 (i=400):**
+*   `chunk` = `full_text[400 : 900]`
+*   **Content:** Characters 400 to 900 ("...Chapter 1...")
+*   *(Note: First 100 chars overlap with previous chunk)*
+
+**Iteration 3 (i=800):**
+*   `chunk` = `full_text[800 : 1300]` (Stops at 1200)
+*   **Content:** Characters 800 to 1200 ("...Conclusion")
+
+**Resulting `chunks` List:**
+```python
+chunks = [
+    "Introduction... [chars 0-500]",
+    "...Chapter 1... [chars 400-900]",
+    "...Conclusion   [chars 800-1200]"
+]
+```
+
+---
+
+## 6. Page Estimation Logic
+```python
+est_page = min((i // (len(full_text) // total_pages)) + 1, total_pages)
+```
+
+**Constants:**
+*   `len(full_text)` = 1200
+*   `total_pages` = 3
+*   `Avg chars per page` = 1200 // 3 = **400**
+
+**Step-by-Step Calculations:**
+
+**Chunk 1 (i=0):**
+*   Calculation: `0 // 400` = 0
+*   Add 1: `0 + 1` = 1
+*   Min: `min(1, 3)` = **1**
+*   **Result:** `estimated_page = 1` ✅
+
+**Chunk 2 (i=400):**
+*   Calculation: `400 // 400` = 1
+*   Add 1: `1 + 1` = 2
+*   Min: `min(2, 3)` = **2**
+*   **Result:** `estimated_page = 2` ✅
+
+**Chunk 3 (i=800):**
+*   Calculation: `800 // 400` = 2
+*   Add 1: `2 + 1` = 3
+*   Min: `min(3, 3)` = **3**
+*   **Result:** `estimated_page = 3` ✅
+
+**Resulting `metadata`:**
+```python
+metadata = [
+    {'start_pos': 0,   'estimated_page': 1},
+    {'start_pos': 400, 'estimated_page': 2},
+    {'start_pos': 800, 'estimated_page': 3}
+]
+```
+
+---
+
+## 7. Embedding Generation
+```python
+for i, chunk in enumerate(chunks):
+    emb = get_ollama_embedding(chunk)
+```
+
+**Iteration 1:**
+*   `i` = 0
+*   `chunk` = "Introduction..."
+*   **API Call:** `POST http://localhost:11434/api/embeddings`
+*   **Return:** `[0.12, -0.45, ...]`
+*   **Action:** `embeddings.append([...])`
+
+**Iteration 2:**
+*   `i` = 1
+*   `chunk` = "...Chapter 1..."
+*   **API Call:** `POST ...`
+*   **Return:** `[0.56, 0.23, ...]`
+*   **Action:** `embeddings.append([...])`
+
+---
+
+## 8. Indexing (FAISS)
+```python
+vectors = np.array(embeddings).astype("float32")
+index.add(vectors)
+```
+*   **Input:** List of 3 vectors (lists of floats).
+*   **Output:** FAISS Index containing 3 vectors, ID 0, 1, and 2.
+
+---
+
+## 9. Answering Question (Query Phase)
+```python
+question = "What is in Chapter 1?"
+query_emb = get_ollama_embedding(question)
+```
+*   **Question Embedding:** `[0.55, 0.22, ...]` (Vector similar to Chunk 2)
+
+---
+
+## 10. Searching Index
+```python
+scores, indices = index.search(query_vec, top_k=3)
+```
+
+**Internal Logic:**
+*   Compare `[0.55, ...]` with Vector 0 (Intro) → Distance 0.8
+*   Compare `[0.55, ...]` with Vector 1 (Chap 1) → Distance 0.1 (Very Close!)
+*   Compare `[0.55, ...]` with Vector 2 (Conc) → Distance 0.9
+
+**Output:**
+```python
+indices = [[1, 0, 2]]  # Chunk 1 is best match, then 0, then 2
+scores  = [[0.1, 0.8, 0.9]]
+```
+
+---
+
+## 11. Context Construction
+```python
+for idx in indices[0]:  # idx loop: 1, 0, 2
+    page = metadata[idx]["estimated_page"]
+    chunk_text = chunks[idx]
+```
+
+**Iteration 1 (idx=1):**
+*   `idx` = 1
+*   `page` = metadata[1]['estimated_page'] = **2**
+*   `chunk_text` = "...Chapter 1..."
+*   **Format:** `[Page 2]: ...Chapter 1...`
+
+**Iteration 2 (idx=0):**
+*   `idx` = 0
+*   `page` = metadata[0]['estimated_page'] = **1**
+*   `chunk_text` = "Introduction..."
+*   **Format:** `[Page 1]: Introduction...`
+
+**Iteration 3 (idx=2):**
+*   `idx` = 2
+*   `page` = metadata[2]['estimated_page'] = **3**
+*   `chunk_text` = "...Conclusion"
+*   **Format:** `[Page 3]: ...Conclusion`
+
+**Final Context String:**
+```text
+[Page 2]: ...Chapter 1...
+
+[Page 1]: Introduction...
+
+[Page 3]: ...Conclusion
+```
+
+This context is then sent to Llama 3.2 to generate the final answer!

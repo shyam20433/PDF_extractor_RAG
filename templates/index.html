@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>PDF Q&A</title>
+</head>
+<body>
+
+  <style>
+    /* Reset */
+* {
+  box-sizing: border-box;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Page */
+body {
+  background-color: #f6f8fa;
+  margin: 0;
+  padding: 0;
+}
+
+/* Container */
+.container {
+  max-width: 600px;
+  margin: 60px auto;
+  background-color: #ffffff;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Headings */
+h2 {
+  margin-top: 0;
+  color: #222;
+  font-size: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 8px;
+}
+
+/* Inputs */
+input[type="file"],
+input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  margin-top: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+/* Buttons */
+button {
+  background-color: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+button:hover {
+  background-color: #1e40af;
+}
+
+/* Answer Box */
+.answer-box {
+  margin-top: 20px;
+  padding: 15px;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  font-size: 14px;
+  color: #111;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+/* Status Message */
+.status {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #555;
+}
+
+  </style>
+<h2>Upload PDF</h2>
+<input type="file" id="pdf">
+<button onclick="uploadPDF()">Upload</button>
+
+<h2>Ask Question</h2>
+<input type="text" id="question">
+<button onclick="askQuestion()">Ask</button>
+
+<p><b>Answer:</b></p>
+<p id="answer"></p>
+
+<script>
+function uploadPDF() {
+  const formData = new FormData();
+  formData.append("pdf", document.getElementById("pdf").files[0]);
+
+  fetch("/upload", {
+    method: "POST",
+    body: formData
+  })
+  .then(res => res.json())
+  .then(data => alert(data.message));
+}
+
+function askQuestion() {
+  fetch("/ask", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      question: document.getElementById("question").value
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("answer").innerText = data.answer;
+  });
+}
+</script>
+
+</body>
+</html>
