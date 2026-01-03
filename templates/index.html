@@ -1,129 +1,185 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
   <title>PDF Q&A</title>
-</head>
-<body>
 
   <style>
-    /* Reset */
-* {
-  box-sizing: border-box;
-  font-family: Arial, Helvetica, sans-serif;
-}
+    /* ===== RESET ===== */
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                   Roboto, Helvetica, Arial, sans-serif;
+    }
 
-/* Page */
-body {
-  background-color: #f6f8fa;
-  margin: 0;
-  padding: 0;
-}
+    body {
+      background-color: #f3f4f6;
+      margin: 0;
+      padding: 0;
+      color: #111827;
+    }
 
-/* Container */
-.container {
-  max-width: 600px;
-  margin: 60px auto;
-  background-color: #ffffff;
-  padding: 30px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
+    /* ===== LAYOUT ===== */
+    .container {
+      max-width: 640px;
+      margin: 80px auto;
+      background-color: #ffffff;
+      padding: 32px;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+    }
 
-/* Headings */
-h2 {
-  margin-top: 0;
-  color: #222;
-  font-size: 20px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 8px;
-}
+    /* ===== HEADINGS ===== */
+    h1 {
+      margin: 0 0 30px;
+      font-size: 24px;
+      font-weight: 600;
+      text-align: center;
+      color: #111827;
+    }
 
-/* Inputs */
-input[type="file"],
-input[type="text"] {
-  width: 100%;
-  padding: 10px;
-  margin-top: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-  font-size: 14px;
-}
+    h2 {
+      margin: 28px 0 12px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 1px solid #e5e7eb;
+      padding-bottom: 6px;
+    }
 
-/* Buttons */
-button {
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  padding: 10px 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  font-size: 14px;
-}
+    /* ===== INPUTS ===== */
+    input[type="file"],
+    input[type="text"] {
+      width: 100%;
+      padding: 11px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #111827;
+      background-color: #fff;
+    }
 
-button:hover {
-  background-color: #1e40af;
-}
+    input[type="file"] {
+      padding: 8px;
+    }
 
-/* Answer Box */
-.answer-box {
-  margin-top: 20px;
-  padding: 15px;
-  background-color: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 5px;
-  font-size: 14px;
-  color: #111;
-  line-height: 1.6;
-  white-space: pre-wrap;
-}
+    input:focus {
+      outline: none;
+      border-color: #2563eb;
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+    }
 
-/* Status Message */
-.status {
-  margin-top: 10px;
-  font-size: 13px;
-  color: #555;
-}
+    /* ===== BUTTONS ===== */
+    button {
+      margin-top: 10px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #ffffff;
+      background-color: #2563eb;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
 
+    button:hover {
+      background-color: #1e40af;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    /* ===== STATUS TEXT ===== */
+    .status {
+      margin-top: 8px;
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    /* ===== ANSWER BOX ===== */
+    .answer-box {
+      margin-top: 18px;
+      padding: 16px;
+      background-color: #f9fafb;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      font-size: 14px;
+      line-height: 1.65;
+      color: #111827;
+      white-space: pre-wrap;
+    }
+
+    /* ===== FOOTER NOTE ===== */
+    .note {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: #9ca3af;
+    }
   </style>
-<h2>Upload PDF</h2>
-<input type="file" id="pdf">
-<button onclick="uploadPDF()">Upload</button>
+</head>
 
-<h2>Ask Question</h2>
-<input type="text" id="question">
-<button onclick="askQuestion()">Ask</button>
+<body>
 
-<p><b>Answer:</b></p>
-<p id="answer"></p>
+  <div class="container">
 
-<script>
-function uploadPDF() {
-  const formData = new FormData();
-  formData.append("pdf", document.getElementById("pdf").files[0]);
+    <h1>PDF Question Answering</h1>
 
-  fetch("/upload", {
-    method: "POST",
-    body: formData
-  })
-  .then(res => res.json())
-  .then(data => alert(data.message));
-}
+    <h2>Upload PDF</h2>
+    <input type="file" id="pdf">
+    <button onclick="uploadPDF()">Upload</button>
+    <div class="status" id="uploadStatus"></div>
 
-function askQuestion() {
-  fetch("/ask", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      question: document.getElementById("question").value
-    })
-  })
-  .then(res => res.json())
-  .then(data => {
-    document.getElementById("answer").innerText = data.answer;
-  });
-}
-</script>
+    <h2>Ask a Question</h2>
+    <input type="text" id="question" placeholder="Ask a question from the uploaded PDF">
+    <button onclick="askQuestion()">Ask</button>
+
+    <div class="answer-box" id="answer"></div>
+
+    <div class="note">
+      Answers are generated based on the uploaded document.
+    </div>
+
+  </div>
+
+  <script>
+    function uploadPDF() {
+      const fileInput = document.getElementById("pdf");
+      if (!fileInput.files.length) {
+        alert("Please select a PDF file.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("pdf", fileInput.files[0]);
+
+      fetch("/upload", {
+        method: "POST",
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("uploadStatus").innerText = data.message;
+      });
+    }
+
+    function askQuestion() {
+      const question = document.getElementById("question").value.trim();
+      if (!question) return;
+
+      fetch("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question })
+      })
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("answer").innerText = data.answer;
+      });
+    }
+  </script>
 
 </body>
 </html>
